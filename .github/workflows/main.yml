@@ -1,59 +1,60 @@
-name: Build Android APK
+name: Build Android APK (Public Playtest)
 on:
   workflow_dispatch:
 
 jobs:
   build:
     name: Compilar APK de Android
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Descargar el Repositorio
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
-      - name: Instalar Java 17 (Temurin)
+      - name: Instalar Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Configurar Android SDK y NDK v29
-        uses: android-actions/setup-android@v3
+      - name: Configurar Android NDK y SDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
         with:
-          api-level: 35
-          build-tools: 35.0.0
-          ndk-version: 29.0.13113456
+          ndk-version: r25c
 
       - name: Instalar Haxe
-        uses: krdlab/setup-haxe@v1
+        uses: krdlab/setup-haxe@v2
         with:
           haxe-version: 4.3.4
 
-      - name: Instalar Librerías del Proyecto
+      - name: Inicializar Herramientas y Submódulos Lime
         run: |
           haxelib setup ~/haxelib
-          haxelib install lime
-          haxelib install openfl
-          haxelib install flixel
+          haxelib install lime --quiet
+          haxelib install openfl --quiet
+          haxelib install flixel --quiet
           haxelib run lime setup flixel
-          haxelib install flixel-addons
-          haxelib install flixel-ui
-          haxelib install hscript
-          haxelib install hscript-ex
-          haxelib install hxvlc
-          haxelib install faxe || true
-          haxelib git discord_rpc https://github.com || true
+          # Forzar la instalación de dependencias requeridas por las nuevas versiones
+          haxelib install flixel-addons --quiet
+          haxelib install flixel-ui --quiet
+          haxelib install hscript --quiet
+          haxelib install hscript-ex --quiet
+          haxelib install hxvlc --quiet
 
-      - name: Configurar Entorno Lime Android
+      - name: Configurar Entorno Android en Lime
         run: |
-          haxelib run lime setup android "${{ env.ANDROID_HOME }}" "${{ env.ANDROID_HOME }}/ndk/29.0.13113456" "${{ env.JAVA_HOME }}"
+          haxelib run lime setup android "${{ env.ANDROID_HOME }}" "${{ steps.setup-ndk.outputs.ndk-path }}" "${{ env.JAVA_HOME }}"
 
-      - name: Compilar juego para Android
+      - name: Compilar APK (Release)
         run: |
           haxelib run lime build android -release
 
-      - name: Subir el APK final como Artefacto
+      - name: Buscar y guardar APK final
         uses: actions/upload-artifact@v4
         with:
-          name: FNF-Android-Build
-          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
-          
+          name: FNF-Playtest-Android
+          path: |
+            export/release/android/bin/app/build/outputs/apk/release/*.apk
+            export/android/bin/app/build/outputs/apk/release/*.apk
