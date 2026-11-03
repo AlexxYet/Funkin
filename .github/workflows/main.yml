@@ -1,4 +1,4 @@
-name: Build Android APK (Public Playtest)
+name: Build Android APK (Official Playtest)
 on:
   workflow_dispatch:
 
@@ -29,23 +29,25 @@ jobs:
         with:
           haxe-version: 4.3.4
 
-      - name: Inicializar Herramientas y Submódulos Lime
+      - name: Inicializar Herramientas y Librerías del Repositorio
         run: |
           haxelib setup ~/haxelib
           haxelib install lime --quiet
           haxelib install openfl --quiet
           haxelib install flixel --quiet
           haxelib run lime setup flixel
-          # Forzar la instalación de dependencias requeridas por las nuevas versiones
           haxelib install flixel-addons --quiet
           haxelib install flixel-ui --quiet
           haxelib install hscript --quiet
           haxelib install hscript-ex --quiet
           haxelib install hxvlc --quiet
 
-      - name: Configurar Entorno Android en Lime
+      - name: Enlazar Rutas de Android (Configuración Silenciosa)
         run: |
-          haxelib run lime setup android "${{ env.ANDROID_HOME }}" "${{ steps.setup-ndk.outputs.ndk-path }}" "${{ env.JAVA_HOME }}"
+          # Usamos comandos directos de variables para saltar la interfaz interactiva de Lime
+          haxelib run lime config ANDROID_SDK "${{ env.ANDROID_HOME }}"
+          haxelib run lime config ANDROID_NDK "${{ steps.setup-ndk.outputs.ndk-path }}"
+          haxelib run lime config JAVA_HOME "${{ env.JAVA_HOME }}"
 
       - name: Compilar APK (Release)
         run: |
