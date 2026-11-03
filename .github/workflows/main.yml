@@ -1,0 +1,58 @@
+name: Build Android APK
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Compilar APK de Android
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Descargar el Repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Configurar Android SDK y NDK v29
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 35
+          build-tools: 35.0.0
+          ndk-version: 29.0.13113456
+
+      - name: Instalar Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: 4.3.4
+
+      - name: Instalar Librerías del Proyecto
+        run: |
+          haxelib setup ~/haxelib
+          haxelib install lime
+          haxelib install openfl
+          haxelib install flixel
+          haxelib run lime setup flixel
+          haxelib install flixel-addons
+          haxelib install flixel-ui
+          haxelib install hscript
+          haxelib install hscript-ex
+          haxelib install hxvlc
+          haxelib install faxe || true
+          haxelib git discord_rpc https://github.com || true
+
+      - name: Configurar Entorno Lime Android
+        run: |
+          haxelib run lime setup android "${{ env.ANDROID_HOME }}" "${{ env.ANDROID_HOME }}/ndk/29.0.13113456" "${{ env.JAVA_HOME }}"
+
+      - name: Compilar juego para Android
+        run: |
+          haxelib run lime build android -release
+
+      - name: Subir el APK final como Artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: FNF-Android-Build
+          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
